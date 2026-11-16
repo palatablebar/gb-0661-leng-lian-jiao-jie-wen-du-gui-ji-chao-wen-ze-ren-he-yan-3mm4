@@ -9,6 +9,7 @@ def test_parameter_new_key(client):
 
 def test_optimistic_review(client):
     """TRAP-26"""
+    client.post('/api/runs',json={'sample':'clean'})
     b=store.latest();payload={'run_id':b['manifest']['run_id'],'version':b['version']}
     assert client.post('/api/batches/review',json=payload).status_code==200;assert client.post('/api/batches/review',json=payload).status_code==409
 

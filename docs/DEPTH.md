@@ -11,7 +11,7 @@
 | M4 超温积分 | 阈值交点与梯形积分 | `/calculate`、`/api/calculate` | `app/modules/calculate/integral.py` `app/modules/calculate/service.py` | `tests/test_calculate.py` |
 | M5 质量隔离 | 筛查坏行与导出证据 | `/quarantine`、`/api/quarantine` | `app/modules/quarantine/rules.py` `app/modules/quarantine/service.py` | `tests/test_quarantine.py` |
 | M6 责任对账 | 行数分钟和积分守恒 | `/reconcile`、`/api/reconcile` | `app/modules/reconcile/compare.py` `app/modules/reconcile/service.py` | `tests/test_reconcile.py` |
-| M7 批次复核 | 内容去重与版本复核 | `/batches`、`/api/batches` | `app/modules/batches/review.py` `app/modules/batches/service.py` | `tests/test_batches.py` |
+| M7 批次复核 | 内容去重与版本复核 | `/batches`、`/api/batches` | `app/modules/batches/review.py` `app/modules/batches/service.py` | `tests/test_batches.py` `tests/test_review.py` |
 
 ## 陷阱登记
 | TRAP | 现象 | 朴素实现会怎样 | 本项目处理 | 处理位置 | 测试 |
@@ -26,12 +26,13 @@
 | TRAP-15 | 温标混用 | 静默误算或覆盖 | 原值保留并确定性判定；由脏样例触发 | `app/modules/contract/normalize.py` | `tests/test_contract.py::test_fahrenheit_correction` |
 | TRAP-23 | 交接边界 | 静默误算或覆盖 | 原值保留并确定性判定；由脏样例触发 | `app/modules/model/intervals.py` | `tests/test_model.py::test_half_open_owner` |
 | TRAP-26 | 陈旧复核 | 静默误算或覆盖 | 原值保留并确定性判定；由脏样例触发 | `app/modules/batches/service.py` | `tests/test_batches.py::test_optimistic_review` |
+| TRAP-27 | 争议缺测混批 | 整批暂缓或整批放行 | 按责任方裁决：唯一归属且测量连续方可确认，争议与缺测单列待核 | `app/modules/batches/review.py` | `tests/test_review.py::test_partial_publish` |
 
 ## 对账规则
-输入数据行=有效采样+隔离行+空行。责任覆盖分钟=正常+超温+未知。各责任方热暴露积分之和等于总积分；展示保留六位小数，守恒容差0.00001。
+输入数据行=有效采样+隔离行+空行。责任覆盖分钟=正常+超温+未知。各责任方热暴露积分之和等于总积分；展示保留六位小数，守恒容差0.00001。复核按责任方发布：仅当该方全部时段唯一归属且测量连续才可确认；交接争议与缺测时段单列待核，不阻塞其他责任方。已确认责任分钟由（批次，责任方）确认记录派生，重复运行与重复确认均不重复计入。
 
 ## 流水线与恢复
-每个业务模块可用同一份内置样例独立试跑。文件超过2MB或10000条会拒绝。编码与结构先校验，坏行隔离后继续。SQLite仅在完整计算成功后事务写入。重复运行的输入摘要、校准摘要、交接摘要、规则版本及参数完全一致时复用批次。重新打开数据库保留批次；旧版本复核返回409。
+每个业务模块可用同一份内置样例独立试跑。文件超过2MB或10000条会拒绝。编码与结构先校验，坏行隔离后继续。SQLite仅在完整计算成功后事务写入。重复运行的输入摘要、校准摘要、交接摘要、规则版本及参数完全一致时复用批次。重新打开数据库保留批次；旧版本复核返回409。责任方确认以（批次，责任方）为主键幂等写入；发布校验失败或版本冲突时事务回滚，保留旧版与已确认记录。
 
 ## 已知不覆盖
-不连接实时探头，不外推首尾采样，不将缺测判断成温度合格。交接责任冲突会阻止复核。GB18030只是明确的设备编码兼容链，不推断任意字符集。
+不连接实时探头，不外推首尾采样，不将缺测判断成温度合格。交接争议与缺测时段不归责于任何一方、不阻塞其他责任方确认。GB18030只是明确的设备编码兼容链，不推断任意字符集。

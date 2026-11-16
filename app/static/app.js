@@ -11,4 +11,4 @@ document.getElementById('run').addEventListener('click',()=>{
  const raw=document.getElementById('csv-text')?.value;
  request('/api/runs',{sample:document.getElementById('sample').value,...(raw?{csv_text:raw}:{}),threshold:document.getElementById('threshold')?.value||'8',max_gap:Number(document.getElementById('gap')?.value||15)});
 });
-document.getElementById('review')?.addEventListener('click',event=>{if(state.busy)return;const b=event.currentTarget;b.disabled=true;request('/api/batches/review',{run_id:b.dataset.run,version:Number(b.dataset.version)});});
+document.querySelectorAll('[data-review]').forEach(b=>b.addEventListener('click',()=>{if(state.busy)return;b.disabled=true;request('/api/batches/review',{run_id:b.dataset.run,version:Number(b.dataset.version),...(b.dataset.owner?{owners:[b.dataset.owner]}:{})});}));
